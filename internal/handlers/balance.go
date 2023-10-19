@@ -2,18 +2,21 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/h3ll0kitt1/loyality-system/internal/crypto/validator"
 	"github.com/h3ll0kitt1/loyality-system/internal/domain"
+	"github.com/h3ll0kitt1/loyality-system/internal/repository"
 )
 
 // получение текущего баланса счёта баллов лояльности пользователя
 func (h *Handlers) GetBonusInfo(w http.ResponseWriter, r *http.Request) {
 
-	username := r.Context().Value("username")
-	bonusInfo, err := h.service.GetBonusInfoForUser(r.Context(), username.(string))
+	login := r.Context().Value("login")
+	bonusInfo, err := h.service.GetBonusInfoForUser(r.Context(), login.(string))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		h.writeResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
@@ -30,36 +33,41 @@ func (h *Handlers) GetBonusInfo(w http.ResponseWriter, r *http.Request) {
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 func (h *Handlers) WithdrawBonus(w http.ResponseWriter, r *http.Request) {
 
-	username := r.Context().Value("username")
+	login := r.Context().Value("login")
 
-	var input domain.WithdrawInfo
-	err := json.NewDecoder(r.Body).Decode(&input)
+	var withdraw domain.WithdrawInfo
+	err := json.NewDecoder(r.Body).Decode(&withdraw)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		h.writeResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
-	ok := h.service.ValidateWithLuhn(input.OrderID)
+	ok := validator.LuhnAlgorithm(withdraw.OrderID)
 	if !ok {
-		w.WriteHeader(http.StatusUnprocessableEntity)
+		h.writeResponse(w, http.StatusUnprocessableEntity, err)
 		return
 	}
 
-	ok = h.service.WithdrawBonusForOrder(r.Context(), username.(string), input.OrderID)
-	if !ok {
-		w.WriteHeader(http.StatusPaymentRequired)
+	err = h.service.WithdrawBonusForOrder(r.Context(), login.(string), withdraw.OrderID, withdraw.Sum)
+	switch {
+	case errors.Is(err, repository.ErrNotEnoughBonus):
+		h.writeResponse(w, http.StatusPaymentRequired, err)
+		return
+	case err != nil:
+		h.writeResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
+
+	h.writeResponse(w, http.StatusOK, "successful payment with bonus is done")
 }
 
 // получение информации о выводе средств с накопительного счёта пользователем
 func (h *Handlers) GetBonusOperationsInfo(w http.ResponseWriter, r *http.Request) {
 
-	username := r.Context().Value("username")
-	bonusInfoHistory, err := h.service.GetBonusOperationsForUser(r.Context(), username.(string))
+	login := r.Context().Value("login")
+	bonusInfoHistory, err := h.service.GetBonusOperationsForUser(r.Context(), login.(string))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		h.writeResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 

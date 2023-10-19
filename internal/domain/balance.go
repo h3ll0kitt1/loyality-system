@@ -5,12 +5,12 @@ import (
 )
 
 type BonusInfo struct {
-	Current   float64 `json:"current"`
-	Withdrawn float64 `json:"withdrawn"`
+	Current  int64 `json:"current"`
+	Withdraw int64 `json:"withdraw"`
 }
 
 type WithdrawInfo struct {
-	OrderID     uint64    `json:"order"`
-	Sum         uint64    `json:"sum"`
-	ProcessedAt time.Time `json:"processed_at,omitempty"`
+	OrderID     uint32    `json:"order" db:"id"`
+	Sum         int64     `json:"sum"`
+	ProcessedAt time.Time `json:"processed_at,omitempty" db:"processed_at"`
 }

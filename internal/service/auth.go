@@ -2,70 +2,77 @@ package service
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
+	"go.uber.org/zap"
+
+	"github.com/h3ll0kitt1/loyality-system/internal/crypto/argon2"
+	"github.com/h3ll0kitt1/loyality-system/internal/crypto/jwt"
+	"github.com/h3ll0kitt1/loyality-system/internal/crypto/random"
 	"github.com/h3ll0kitt1/loyality-system/internal/domain"
+)
+
+var (
+	ErrWrongCredentials = fmt.Errorf("user has given wrong credentials")
 )
 
 type Service struct {
 	repo Repository
+	log  *zap.SugaredLogger
 }
 
-func NewService(repo Repository) *Service {
+func NewService(repo Repository, log *zap.SugaredLogger) *Service {
 	return &Service{
 		repo: repo,
+		log:  log,
 	}
 }
 
 type Repository interface {
 
 	// auth
-	CheckUserExists(ctx context.Context, username string) bool
-	CreateUser(ctx context.Context, credentials domain.Credentials) error
-	GetSaltForUser(ctx context.Context, username string) string
-	GetPasswordHashForUser(ctx context.Context, username string) string
-
-	// balance
-	GetBonusInfoForUser(ctx context.Context, username string) (domain.BonusInfo, error)
-	WithdrawBonusForOrder(ctx context.Context, username string, orderID uint64) bool
-	GetBonusOperationsForUser(ctx context.Context, username string) ([]domain.WithdrawInfo, error)
+	CreateUser(ctx context.Context, username string, hashedPassword string, salt string) error
+	GetSaltForUser(ctx context.Context, username string) (string, error)
+	GetPasswordHashForUser(ctx context.Context, username string) (string, error)
 
 	// order
-	CheckOrderIsNotDuplicated(ctx context.Context, username string, orderID uint64) bool
-	CheckOrderIsNotExistsForAnotherUser(ctx context.Context, username string, orderID uint64) bool
-	LoadOrderInfo(ctx context.Context, username string, orderID uint64) error
+	CheckOrderIsNotExistsForOtherUser(ctx context.Context, username string, orderID uint32) (bool, error)
+	CheckOrderIsNotExistsForThisUser(ctx context.Context, username string, orderID uint32) (bool, error)
+	LoadOrderInfo(ctx context.Context, username string, orderID uint32) error
 	GetOrdersInfoForUser(ctx context.Context, username string) ([]domain.OrderInfo, error)
-}
 
-func (s *Service) CheckUserExists(ctx context.Context, username string) bool {
-	return s.repo.CheckUserExists(ctx, username)
+	// // balance
+	GetBonusInfoForUser(ctx context.Context, username string) (domain.BonusInfo, error)
+	WithdrawBonusForOrder(ctx context.Context, username string, orderID uint32, sum int64) error
+	GetBonusOperationsForUser(ctx context.Context, username string) ([]domain.WithdrawInfo, error)
 }
 
 func (s *Service) CreateUser(ctx context.Context, credentials domain.Credentials) error {
-	return s.repo.CreateUser(ctx, credentials)
+
+	salt := random.GenerateSalt()
+	hashedPassword := argon2.GenerateHash(credentials.Password, salt)
+
+	if err := s.repo.CreateUser(ctx, credentials.Login, hashedPassword, salt); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	return nil
 }
 
 func (s *Service) AuthUser(ctx context.Context, credentials domain.Credentials) (string, error) {
 
-	if !s.repo.CheckUserExists(ctx, credentials.Username) {
-		return "", errors.New("check username")
+	salt, err := s.repo.GetSaltForUser(ctx, credentials.Login)
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
 	}
 
-	salt := s.repo.GetSaltForUser(ctx, credentials.Username)
-	hashedPassword := s.repo.GetPasswordHashForUser(ctx, credentials.Username)
-
-	if hashedPassword != s.hasher(credentials.Password, salt) {
-		return "", errors.New("wrong credentials")
+	hashedPassword, err := s.repo.GetPasswordHashForUser(ctx, credentials.Login)
+	if err != nil {
+		return "", fmt.Errorf("%w", err)
 	}
-	return s.createJWTAuthToken(credentials.Username), nil
-}
 
-func (s *Service) hasher(password string, salt string) string {
-	// write impl of argon2 hasher
-	return ""
-}
+	if hashedPassword != argon2.GenerateHash(credentials.Password, salt) {
+		return "", ErrWrongCredentials
+	}
 
-func (s *Service) createJWTAuthToken(username string) string {
-	// write impl JWT construction
-	return ""
+	return jwt.GenerateToken(credentials.Login), nil
 }

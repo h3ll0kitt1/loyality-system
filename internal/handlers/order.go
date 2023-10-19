@@ -2,60 +2,68 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
+
+	"github.com/h3ll0kitt1/loyality-system/internal/crypto/validator"
+	"github.com/h3ll0kitt1/loyality-system/internal/repository"
 )
 
 // загрузка пользователем номера заказа для расчёта
 func (h *Handlers) LoadOrder(w http.ResponseWriter, r *http.Request) {
 
-	username := r.Context().Value("username")
+	login := r.Context().Value("login")
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		h.writeResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	orderID, err := strconv.ParseUint(string(body), 10, 64)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		h.writeResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
-	ok := h.service.ValidateWithLuhn(orderID)
+	ok := validator.LuhnAlgorithm(uint32(orderID))
 	if !ok {
-		w.WriteHeader(http.StatusUnprocessableEntity)
+		h.writeResponse(w, http.StatusUnprocessableEntity, err)
 		return
 	}
 
-	ok = h.service.CheckOrderIsNotExistsForAnotherUser(r.Context(), username.(string), orderID)
+	ok, err = h.service.CheckOrderIsNotDuplicated(r.Context(), login.(string), uint32(orderID))
+	switch {
+	case errors.Is(err, repository.ErrOrderAlreadyExistsForOtherUser):
+		h.writeResponse(w, http.StatusConflict, err)
+		return
+	case err != nil:
+		h.writeResponse(w, http.StatusInternalServerError, err)
+		return
+	}
 	if !ok {
-		w.WriteHeader(http.StatusConflict)
+		h.writeResponse(w, http.StatusOK, "order has been already registered for this user")
 		return
 	}
 
-	ok = h.service.CheckOrderIsNotDuplicated(r.Context(), username.(string), orderID)
-	if !ok {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	err = h.service.LoadOrderInfo(r.Context(), username.(string), orderID)
+	err = h.service.LoadOrderInfo(r.Context(), login.(string), uint32(orderID))
 	if err != nil {
+		h.writeResponse(w, http.StatusInternalServerError, err)
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
+
+	h.writeResponse(w, http.StatusAccepted, "new order is registered")
 }
 
 // получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях;
 func (h *Handlers) GetOrdersInfo(w http.ResponseWriter, r *http.Request) {
 
-	username := r.Context().Value("username")
+	login := r.Context().Value("login")
 
-	ordersInfoHistory, err := h.service.GetOrdersInfoForUser(r.Context(), username.(string))
+	ordersInfoHistory, err := h.service.GetOrdersInfoForUser(r.Context(), login.(string))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		h.writeResponse(w, http.StatusInternalServerError, err)
 		return
 	}
 

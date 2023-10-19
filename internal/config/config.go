@@ -22,17 +22,17 @@ func NewConfig() *Config {
 func (cfg *Config) Parse() {
 
 	var (
-		flagSystemCalc  string
-		flagHostPort    string
-		flagDatabaseDSN string
+		flagAccrualSystem string
+		flagHostPort      string
+		flagDatabaseDSN   string
 	)
 
-	flag.StringVar(&flagSystemCalc, "r", "", "address of system bonus calculations")
+	flag.StringVar(&flagAccrualSystem, "r", "", "address of system bonus calculations")
 	flag.StringVar(&flagHostPort, "a", "localhost:8080", "address and port to run app")
 	flag.StringVar(&flagDatabaseDSN, "d", "", "databaseDSN to connect to database")
 
-	if envSystemCalc := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envSystemCalc != "" {
-		flagSystemCalc = envSystemCalc
+	if envAccrualSystem := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envAccrualSystem != "" {
+		flagAccrualSystem = envAccrualSystem
 	}
 
 	if envHostPort := os.Getenv("RUN_ADDRESS"); envHostPort != "" {
@@ -43,7 +43,7 @@ func (cfg *Config) Parse() {
 		flagDatabaseDSN = envDatabaseDSN
 	}
 
-	cfg.SystemCalc = flagSystemCalc
+	cfg.SystemCalc = flagAccrualSystem
 	cfg.Server.HostPort = flagHostPort
 	cfg.DatabaseDSN = flagDatabaseDSN
 }

@@ -10,8 +10,8 @@ func (s *Service) GetBonusInfoForUser(ctx context.Context, username string) (dom
 	return s.repo.GetBonusInfoForUser(ctx, username)
 }
 
-func (s *Service) WithdrawBonusForOrder(ctx context.Context, username string, orderID uint64) bool {
-	return s.repo.WithdrawBonusForOrder(ctx, username, orderID)
+func (s *Service) WithdrawBonusForOrder(ctx context.Context, username string, orderID uint32, sum int64) error {
+	return s.repo.WithdrawBonusForOrder(ctx, username, orderID, sum)
 }
 
 func (s *Service) GetBonusOperationsForUser(ctx context.Context, username string) ([]domain.WithdrawInfo, error) {
