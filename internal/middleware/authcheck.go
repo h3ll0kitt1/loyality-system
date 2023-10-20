@@ -2,14 +2,14 @@ package middleware
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 
 	"github.com/h3ll0kitt1/loyality-system/internal/crypto/jwt"
 	"github.com/h3ll0kitt1/loyality-system/internal/domain"
+	"github.com/h3ll0kitt1/loyality-system/internal/utils"
 )
 
 var (
@@ -19,44 +19,30 @@ var (
 func CheckAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		cookie, err := r.Cookie("gophermarket")
+		cookie, err := r.Cookie("gohermart")
 		if err != nil {
 			switch {
 			case errors.Is(err, http.ErrNoCookie):
-				writeResponse(w, http.StatusUnauthorized, ErrUnauthorizedAccess)
+				utils.WriteResponse(w, http.StatusUnauthorized, ErrUnauthorizedAccess)
 			default:
-				writeResponse(w, http.StatusInternalServerError, err)
+				utils.WriteResponse(w, http.StatusInternalServerError, err)
 			}
 			return
 		}
 
-		login, ok := jwt.CheckToken(cookie.Value)
-		if !ok {
-			writeResponse(w, http.StatusUnauthorized, ErrUnauthorizedAccess)
+		var envSecretKey string
+		if envSecretKey = os.Getenv("SECRET_KEY"); envSecretKey == "" {
+			utils.WriteResponse(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		login, err := jwt.CheckToken(cookie.Value, envSecretKey)
+		if err != nil {
+			utils.WriteResponse(w, http.StatusUnauthorized, ErrUnauthorizedAccess)
 			return
 		}
 
 		ctx := context.WithValue(r.Context(), domain.CtxLoginKey{}, login)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
-}
-
-func writeResponse(w http.ResponseWriter, status int, data interface{}) {
-	w.WriteHeader(status)
-	w.Header().Set("Content-Type", "application/json")
-
-	if x, ok := data.(error); ok {
-		if err := json.NewEncoder(w).Encode(ErrorResponse{Error: x.Error()}); err != nil {
-			log.Printf("write response failed: %s", err)
-		}
-		return
-	}
-
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("write response failed: %s", err)
-	}
-}
-
-type ErrorResponse struct {
-	Error string `json:"error"`
 }

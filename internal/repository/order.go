@@ -13,7 +13,7 @@ var (
 	ErrOrderAlreadyExistsForOtherUser = fmt.Errorf("order has been already registered by another user")
 )
 
-func (r *RepositorySQL) LoadOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error) {
+func (r *RepositorySQL) InsertOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error) {
 
 	tx, err := r.db.Beginx()
 	if err != nil {
@@ -44,6 +44,10 @@ func (r *RepositorySQL) LoadOrderInfo(ctx context.Context, username string, orde
 	return true, nil
 }
 
+func (r *RepositorySQL) UpdateOrderInfo(ctx context.Context, order domain.OrderInfoRequest) error {
+	return nil
+}
+
 func (r *RepositorySQL) GetOrdersInfoForUser(ctx context.Context, username string) ([]domain.OrderInfo, error) {
 
 	var orders []domain.OrderInfo
@@ -53,6 +57,20 @@ func (r *RepositorySQL) GetOrdersInfoForUser(ctx context.Context, username strin
 
 	if err := r.db.SelectContext(ctx, &orders, query, username); err != nil {
 		return nil, fmt.Errorf("repository: get orders for user failed: %w", err)
+	}
+	return orders, nil
+}
+
+func (r *RepositorySQL) GetOrdersForUpdate(ctx context.Context, limit int32) ([]domain.OrderInfo, error) {
+
+	var orders []domain.OrderInfo
+
+	query := `	SELECT id, status FROM orders
+   				WHERE status = 'NEW' OR status = 'PROCESSING'
+   				LIMIT $1 `
+
+	if err := r.db.SelectContext(ctx, &orders, query, limit); err != nil {
+		return nil, fmt.Errorf("repository: get orders for update failed: %w", err)
 	}
 	return orders, nil
 }

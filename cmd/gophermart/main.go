@@ -2,10 +2,16 @@ package main
 
 import (
 	"context"
+	// "encoding/json"
+	// "fmt"
+	"log"
+	// "net/http"
+	// "time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/h3ll0kitt1/loyality-system/internal/config"
+	//"github.com/h3ll0kitt1/loyality-system/internal/domain"
 	"github.com/h3ll0kitt1/loyality-system/internal/graceful"
 	"github.com/h3ll0kitt1/loyality-system/internal/handlers"
 	"github.com/h3ll0kitt1/loyality-system/internal/logger"
@@ -17,7 +23,9 @@ import (
 func main() {
 
 	cfg := config.NewConfig()
-	cfg.Parse()
+	if err := cfg.Parse(); err != nil {
+		log.Fatal("parse config:", err)
+	}
 
 	log := logger.NewLogger()
 
@@ -31,13 +39,13 @@ func main() {
 		log.Panic(err)
 	}
 
-	s := service.NewService(r, log)
+	s := service.NewService(r, cfg, log)
 	h := handlers.NewHandlers(s, log)
 
 	router := chi.NewRouter()
 	register(router, h)
 
-	//go updater(s)
+	//go updater(context.Background(), s, cfg)
 
 	graceful.StartServer(router, cfg.Server.HostPort)
 }
@@ -71,3 +79,53 @@ func register(r *chi.Mux, h handlers.Handlers) {
 	})
 	r.NotFound(h.ErrorNotFound)
 }
+
+// func updater(ctx context.Context, s handlers.Services, cfg *config.Config) {
+
+// 	ticker := time.NewTicker(cfg.CheckInterval)
+
+// 	for range ticker.C {
+// 		ordersToUpdate, err := s.GetOrdersForUpdate(ctx, 100) // get only NEW / PROCESSING
+// 		if err != nil {
+// 			log.Printf("get orders failed: %s", err)
+// 			return
+// 		}
+
+// 		for _, order := range ordersToUpdate {
+
+// 			requestURL := fmt.Sprintf("http://%s/api/orders/%d", cfg.Server.HostPort, order.Number)
+// 			resp, err := http.Get(requestURL)
+// 			if err != nil {
+// 				log.Printf("make GET request failed: %s", err)
+// 				return
+// 			}
+
+// 			if resp.StatusCode == http.StatusNoContent {
+// 				log.Println("order is not registered in the system")
+// 				continue
+// 			}
+
+// 			if resp.StatusCode == http.StatusTooManyRequests {
+// 				log.Println("too many requests")
+// 				// parse resp - retry - wait for time
+// 				continue
+// 			}
+
+// 			if resp.StatusCode == http.StatusInternalServerError {
+// 				log.Println("internal error")
+// 				continue
+// 			}
+
+// 			var orderInfo domain.OrderInfoRequest
+// 			if err := json.NewDecoder(resp.Body).Decode(&orderInfo); err != nil {
+// 				log.Println("json error")
+// 				continue
+// 			}
+
+// 			if err := s.UpdateOrderInfo(ctx, orderInfo); err != nil {
+// 				log.Println("update error")
+// 				continue
+// 			}
+// 		}
+// 	}
+// }

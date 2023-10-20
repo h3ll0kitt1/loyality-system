@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/h3ll0kitt1/loyality-system/internal/config"
 	"github.com/h3ll0kitt1/loyality-system/internal/crypto/argon2"
 	"github.com/h3ll0kitt1/loyality-system/internal/crypto/jwt"
 	"github.com/h3ll0kitt1/loyality-system/internal/crypto/random"
@@ -19,12 +20,14 @@ var (
 type Service struct {
 	repo Repository
 	log  *zap.SugaredLogger
+	cfg  *config.Config
 }
 
-func NewService(repo Repository, log *zap.SugaredLogger) *Service {
+func NewService(repo Repository, cfg *config.Config, log *zap.SugaredLogger) *Service {
 	return &Service{
 		repo: repo,
 		log:  log,
+		cfg:  cfg,
 	}
 }
 
@@ -36,8 +39,11 @@ type Repository interface {
 	GetPasswordHashForUser(ctx context.Context, username string) (string, error)
 
 	// order
-	LoadOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error)
+	InsertOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error)
+	UpdateOrderInfo(ctx context.Context, order domain.OrderInfoRequest) error
+
 	GetOrdersInfoForUser(ctx context.Context, username string) ([]domain.OrderInfo, error)
+	GetOrdersForUpdate(ctx context.Context, limit int32) ([]domain.OrderInfo, error)
 
 	// // balance
 	GetBonusInfoForUser(ctx context.Context, username string) (domain.BonusInfo, error)
@@ -47,7 +53,11 @@ type Repository interface {
 
 func (s *Service) CreateUser(ctx context.Context, credentials domain.Credentials) error {
 
-	salt := random.GenerateSalt()
+	salt, err := random.GenerateSalt()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
 	hashedPassword := argon2.GenerateHash(credentials.Password, salt)
 
 	if err := s.repo.CreateUser(ctx, credentials.Login, hashedPassword, salt); err != nil {
@@ -72,5 +82,9 @@ func (s *Service) AuthUser(ctx context.Context, credentials domain.Credentials) 
 		return "", ErrWrongCredentials
 	}
 
-	return jwt.GenerateToken(credentials.Login), nil
+	token, err := jwt.GenerateToken(credentials.Login, s.cfg)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }

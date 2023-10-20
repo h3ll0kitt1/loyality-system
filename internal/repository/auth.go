@@ -37,7 +37,7 @@ func NewRepository(ctx context.Context, DatabaseDSN string, log *zap.SugaredLogg
 	query := `	CREATE TABLE IF NOT EXISTS users (
     			username VARCHAR(255) PRIMARY KEY,
     			password_hash VARCHAR(128) NOT NULL,
-    			salt VARCHAR(4) NOT NULL)`
+    			salt VARCHAR(32) NOT NULL)`
 	_, err = tx.ExecContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("create users table failed: %w", err)
