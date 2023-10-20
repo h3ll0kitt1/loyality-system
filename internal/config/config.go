@@ -30,6 +30,7 @@ func (cfg *Config) Parse() {
 	flag.StringVar(&flagAccrualSystem, "r", "", "address of system bonus calculations")
 	flag.StringVar(&flagHostPort, "a", "localhost:8080", "address and port to run app")
 	flag.StringVar(&flagDatabaseDSN, "d", "", "databaseDSN to connect to database")
+	flag.Parse()
 
 	if envAccrualSystem := os.Getenv("ACCRUAL_SYSTEM_ADDRESS"); envAccrualSystem != "" {
 		flagAccrualSystem = envAccrualSystem

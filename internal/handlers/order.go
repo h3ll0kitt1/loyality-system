@@ -33,7 +33,7 @@ func (h *Handlers) LoadOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, err = h.service.CheckOrderIsNotDuplicated(r.Context(), login.(string), uint32(orderID))
+	ok, err = h.service.LoadOrderInfo(r.Context(), login.(string), uint32(orderID))
 	switch {
 	case errors.Is(err, repository.ErrOrderAlreadyExistsForOtherUser):
 		h.writeResponse(w, http.StatusConflict, err)
@@ -42,17 +42,11 @@ func (h *Handlers) LoadOrder(w http.ResponseWriter, r *http.Request) {
 		h.writeResponse(w, http.StatusInternalServerError, err)
 		return
 	}
+
 	if !ok {
 		h.writeResponse(w, http.StatusOK, "order has been already registered for this user")
 		return
 	}
-
-	err = h.service.LoadOrderInfo(r.Context(), login.(string), uint32(orderID))
-	if err != nil {
-		h.writeResponse(w, http.StatusInternalServerError, err)
-		return
-	}
-
 	h.writeResponse(w, http.StatusAccepted, "new order is registered")
 }
 

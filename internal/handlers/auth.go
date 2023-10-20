@@ -32,8 +32,7 @@ type Services interface {
 	AuthUser(ctx context.Context, credentials domain.Credentials) (string, error)
 
 	// order
-	CheckOrderIsNotDuplicated(ctx context.Context, username string, orderID uint32) (bool, error)
-	LoadOrderInfo(ctx context.Context, username string, orderID uint32) error
+	LoadOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error)
 	GetOrdersInfoForUser(ctx context.Context, username string) ([]domain.OrderInfo, error)
 
 	// // bonus

@@ -6,23 +6,7 @@ import (
 	"github.com/h3ll0kitt1/loyality-system/internal/domain"
 )
 
-func (s *Service) CheckOrderIsNotDuplicated(ctx context.Context, username string, orderID uint32) (bool, error) {
-	ok, err := s.repo.CheckOrderIsNotExistsForOtherUser(ctx, username, orderID)
-	if err != nil {
-		return false, err
-	}
-	if !ok {
-		return false, nil
-	}
-
-	ok, err = s.repo.CheckOrderIsNotExistsForThisUser(ctx, username, orderID)
-	if err != nil {
-		return false, err
-	}
-	return ok, nil
-}
-
-func (s *Service) LoadOrderInfo(ctx context.Context, username string, orderID uint32) error {
+func (s *Service) LoadOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error) {
 	return s.repo.LoadOrderInfo(ctx, username, orderID)
 }
 

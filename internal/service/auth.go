@@ -36,9 +36,7 @@ type Repository interface {
 	GetPasswordHashForUser(ctx context.Context, username string) (string, error)
 
 	// order
-	CheckOrderIsNotExistsForOtherUser(ctx context.Context, username string, orderID uint32) (bool, error)
-	CheckOrderIsNotExistsForThisUser(ctx context.Context, username string, orderID uint32) (bool, error)
-	LoadOrderInfo(ctx context.Context, username string, orderID uint32) error
+	LoadOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error)
 	GetOrdersInfoForUser(ctx context.Context, username string) ([]domain.OrderInfo, error)
 
 	// // balance
