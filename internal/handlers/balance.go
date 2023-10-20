@@ -13,7 +13,7 @@ import (
 // получение текущего баланса счёта баллов лояльности пользователя
 func (h *Handlers) GetBonusInfo(w http.ResponseWriter, r *http.Request) {
 
-	login := r.Context().Value("login")
+	login := r.Context().Value(domain.CtxLoginKey{})
 	bonusInfo, err := h.service.GetBonusInfoForUser(r.Context(), login.(string))
 	if err != nil {
 		h.writeResponse(w, http.StatusInternalServerError, err)
@@ -33,7 +33,7 @@ func (h *Handlers) GetBonusInfo(w http.ResponseWriter, r *http.Request) {
 // запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 func (h *Handlers) WithdrawBonus(w http.ResponseWriter, r *http.Request) {
 
-	login := r.Context().Value("login")
+	login := r.Context().Value(domain.CtxLoginKey{})
 
 	var withdraw domain.WithdrawInfo
 	err := json.NewDecoder(r.Body).Decode(&withdraw)
@@ -64,7 +64,7 @@ func (h *Handlers) WithdrawBonus(w http.ResponseWriter, r *http.Request) {
 // получение информации о выводе средств с накопительного счёта пользователем
 func (h *Handlers) GetBonusOperationsInfo(w http.ResponseWriter, r *http.Request) {
 
-	login := r.Context().Value("login")
+	login := r.Context().Value(domain.CtxLoginKey{})
 	bonusInfoHistory, err := h.service.GetBonusOperationsForUser(r.Context(), login.(string))
 	if err != nil {
 		h.writeResponse(w, http.StatusInternalServerError, err)

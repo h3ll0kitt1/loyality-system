@@ -8,13 +8,14 @@ import (
 	"strconv"
 
 	"github.com/h3ll0kitt1/loyality-system/internal/crypto/validator"
+	"github.com/h3ll0kitt1/loyality-system/internal/domain"
 	"github.com/h3ll0kitt1/loyality-system/internal/repository"
 )
 
 // загрузка пользователем номера заказа для расчёта
 func (h *Handlers) LoadOrder(w http.ResponseWriter, r *http.Request) {
 
-	login := r.Context().Value("login")
+	login := r.Context().Value(domain.CtxLoginKey{})
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		h.writeResponse(w, http.StatusInternalServerError, err)
@@ -53,7 +54,7 @@ func (h *Handlers) LoadOrder(w http.ResponseWriter, r *http.Request) {
 // получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях;
 func (h *Handlers) GetOrdersInfo(w http.ResponseWriter, r *http.Request) {
 
-	login := r.Context().Value("login")
+	login := r.Context().Value(domain.CtxLoginKey{})
 
 	ordersInfoHistory, err := h.service.GetOrdersInfoForUser(r.Context(), login.(string))
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/h3ll0kitt1/loyality-system/internal/crypto/jwt"
+	"github.com/h3ll0kitt1/loyality-system/internal/domain"
 )
 
 var (
@@ -35,7 +36,7 @@ func CheckAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "login", login)
+		ctx := context.WithValue(r.Context(), domain.CtxLoginKey{}, login)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -46,13 +47,13 @@ func writeResponse(w http.ResponseWriter, status int, data interface{}) {
 
 	if x, ok := data.(error); ok {
 		if err := json.NewEncoder(w).Encode(ErrorResponse{Error: x.Error()}); err != nil {
-			log.Printf("write response failed: %w", err)
+			log.Printf("write response failed: %s", err)
 		}
 		return
 	}
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Printf("write response failed: %w", err)
+		log.Printf("write response failed: %s", err)
 	}
 }
 

@@ -39,7 +39,7 @@ func (r *RepositorySQL) LoadOrderInfo(ctx context.Context, username string, orde
 	}
 
 	if err = tx.Commit(); err != nil {
-		return false, fmt.Errorf("repository: withdraw bonus for order failed: %w", err)
+		return false, fmt.Errorf("repository: load order info failed: %w", err)
 	}
 	return true, nil
 }

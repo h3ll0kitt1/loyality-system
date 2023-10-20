@@ -24,7 +24,7 @@ func StartServer(r *chi.Mux, addr string) {
 		}
 	}()
 
-	quit := make(chan os.Signal)
+	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 
