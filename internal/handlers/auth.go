@@ -33,14 +33,14 @@ type Services interface {
 	AuthUser(ctx context.Context, credentials domain.Credentials) (string, error)
 
 	// order
-	InsertOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error)
+	InsertOrderInfo(ctx context.Context, username string, orderID string) (bool, error)
 	UpdateOrderInfo(ctx context.Context, order domain.OrderInfoRequest) error
 	GetOrdersInfoForUser(ctx context.Context, username string) ([]domain.OrderInfo, error)
 	GetOrdersForUpdate(ctx context.Context, limit int32) ([]domain.OrderInfo, error)
 
 	// bonus
 	GetBonusInfoForUser(ctx context.Context, username string) (domain.BonusInfo, error)
-	WithdrawBonusForOrder(ctx context.Context, username string, orderID uint32, sum int64) error
+	WithdrawBonusForOrder(ctx context.Context, username string, orderID string, sum int64) error
 	GetBonusOperationsForUser(ctx context.Context, username string) ([]domain.WithdrawInfo, error)
 
 	// updater
@@ -72,6 +72,8 @@ func (h *Handlers) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		utils.WriteResponse(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	fmt.Println("gohermart=" + authToken)
 
 	cookie := http.Cookie{
 		Name:     "gohermart",

@@ -23,19 +23,20 @@ func (h *Handlers) LoadOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orderID, err := strconv.ParseUint(string(body), 10, 64)
+	orderID := string(body)
+	_, err = strconv.ParseUint(orderID, 10, 64)
 	if err != nil {
 		utils.WriteResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
-	ok := validator.LuhnAlgorithm(uint32(orderID))
+	ok := validator.LuhnAlgorithm(orderID)
 	if !ok {
 		utils.WriteResponse(w, http.StatusUnprocessableEntity, err)
 		return
 	}
 
-	ok, err = h.service.InsertOrderInfo(r.Context(), login.(string), uint32(orderID))
+	ok, err = h.service.InsertOrderInfo(r.Context(), login.(string), orderID)
 	switch {
 	case errors.Is(err, repository.ErrOrderAlreadyExistsForOtherUser):
 		utils.WriteResponse(w, http.StatusConflict, err)

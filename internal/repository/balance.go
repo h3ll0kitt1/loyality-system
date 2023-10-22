@@ -30,7 +30,7 @@ func (r *RepositorySQL) GetBonusInfoForUser(ctx context.Context, username string
 	return bonus, nil
 }
 
-func (r *RepositorySQL) WithdrawBonusForOrder(ctx context.Context, username string, orderID uint32, sum int64) error {
+func (r *RepositorySQL) WithdrawBonusForOrder(ctx context.Context, username string, orderID string, sum int64) error {
 
 	tx, err := r.db.Beginx()
 	if err != nil {
@@ -111,7 +111,7 @@ func (r *RepositorySQL) changeBonusBalance(ctx context.Context, q q, username st
 	return nil
 }
 
-func (r *RepositorySQL) updateBonusWithdrawInfo(ctx context.Context, q q, username string, orderID uint32, sum int64) error {
+func (r *RepositorySQL) updateBonusWithdrawInfo(ctx context.Context, q q, username string, orderID string, sum int64) error {
 
 	query := `	INSERT INTO withdraws (id, username, sum, processed_at)
 				VALUES ($1, $2, $3, NOW())

@@ -1,13 +1,6 @@
 package validator
 
-import (
-	"strconv"
-)
-
-func LuhnAlgorithm(orderID uint32) bool {
-
-	order := strconv.FormatUint(uint64(orderID), 10)
-
+func LuhnAlgorithm(order string) bool {
 	total := 0
 	parity := len(order) % 2
 	for i := 0; i < len(order); i++ {

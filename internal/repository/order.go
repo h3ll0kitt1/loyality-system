@@ -13,7 +13,7 @@ var (
 	ErrOrderAlreadyExistsForOtherUser = fmt.Errorf("order has been already registered by another user")
 )
 
-func (r *RepositorySQL) InsertOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error) {
+func (r *RepositorySQL) InsertOrderInfo(ctx context.Context, username string, orderID string) (bool, error) {
 
 	tx, err := r.db.Beginx()
 	if err != nil {
@@ -45,14 +45,84 @@ func (r *RepositorySQL) InsertOrderInfo(ctx context.Context, username string, or
 }
 
 func (r *RepositorySQL) UpdateOrderInfo(ctx context.Context, order domain.OrderInfoRequest) error {
+
+	tx, err := r.db.Beginx()
+	if err != nil {
+		return fmt.Errorf("repository: load order info failed: %w", err)
+	}
+	defer tx.Rollback()
+
+	query := `	UPDATE orders
+				SET status = '$1', accrual = $2
+				WHERE order_id = $3
+				RETURNING TRUE`
+
+	var ok bool
+
+	err = tx.GetContext(ctx, &ok, query, order.Status, order.Accrual, order.Order)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return nil
+	case err != nil:
+		return fmt.Errorf("repository: update order info (update status, accrual) failed: %w", err)
+	}
+
+	if order.Status == "PROCESSED" {
+
+		query := `	SELECT username FROM orders
+   					WHERE order_id = $1`
+
+		var username string
+		err := tx.GetContext(ctx, &username, query, order.Order)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrUserNotExists
+		case err != nil:
+			return fmt.Errorf("repository: update order info (select username) failed: %w", err)
+		}
+
+		query = `	UPDATE bonus
+					SET current = current + $1
+					WHERE username = $2
+					RETURNING TRUE`
+		var ok bool
+		err = tx.GetContext(ctx, &ok, query, order.Accrual, username)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil
+		case err != nil:
+			return fmt.Errorf("repository: update order info (update bonus) failed: %w", err)
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("repository: update order info failed: %w", err)
+	}
+
 	return nil
 }
+
+// query = `	CREATE TABLE IF NOT EXISTS orders (
+// 			order_id VARCHAR(32) PRIMARY KEY,
+// 			username VARCHAR(255) NOT NULL REFERENCES users(username),
+// 			status VARCHAR(12) NOT NULL,
+// 			accrual INTEGER DEFAULT -1,
+// 			uploaded_at  TIMESTAMP NOT NULL)`
+// _, err = tx.ExecContext(ctx, query)
+// if err != nil {
+// 	return nil, fmt.Errorf("create orders table failed: %w", err)
+// }
+
+// query = `	CREATE TABLE IF NOT EXISTS bonus (
+// 			username VARCHAR(255) primary key REFERENCES users(username),
+// 			current BIGINT DEFAULT 0,
+// 			withdraw BIGINT DEFAULT 0)`
 
 func (r *RepositorySQL) GetOrdersInfoForUser(ctx context.Context, username string) ([]domain.OrderInfo, error) {
 
 	var orders []domain.OrderInfo
 
-	query := `	SELECT id, status, accrual, uploaded_at FROM orders
+	query := `	SELECT order_id, status, accrual, uploaded_at FROM orders
    				WHERE username = $1`
 
 	if err := r.db.SelectContext(ctx, &orders, query, username); err != nil {
@@ -65,7 +135,7 @@ func (r *RepositorySQL) GetOrdersForUpdate(ctx context.Context, limit int32) ([]
 
 	var orders []domain.OrderInfo
 
-	query := `	SELECT id, status FROM orders
+	query := `	SELECT order_id, status FROM orders
    				WHERE status = 'NEW' OR status = 'PROCESSING'
    				LIMIT $1 `
 
@@ -75,10 +145,10 @@ func (r *RepositorySQL) GetOrdersForUpdate(ctx context.Context, limit int32) ([]
 	return orders, nil
 }
 
-func (r *RepositorySQL) orderIsNotExistsForOtherUser(ctx context.Context, q q, username string, orderID uint32) error {
+func (r *RepositorySQL) orderIsNotExistsForOtherUser(ctx context.Context, q q, username string, orderID string) error {
 
-	query := ` 	SELECT id FROM orders
-   				WHERE id = $1 AND username <> $2`
+	query := ` 	SELECT order_id FROM orders
+   				WHERE order_id = $1 AND username <> $2`
 
 	var result uint32
 
@@ -92,12 +162,12 @@ func (r *RepositorySQL) orderIsNotExistsForOtherUser(ctx context.Context, q q, u
 	return ErrOrderAlreadyExistsForOtherUser
 }
 
-func (r *RepositorySQL) orderIsNotExistsForThisUser(ctx context.Context, q q, username string, orderID uint32) (bool, error) {
+func (r *RepositorySQL) orderIsNotExistsForThisUser(ctx context.Context, q q, username string, orderID string) (bool, error) {
 
-	query := ` 	SELECT id FROM orders
-   				WHERE id = $1 AND username = $2`
+	query := ` 	SELECT order_id FROM orders
+   				WHERE order_id = $1 AND username = $2`
 
-	var result uint32
+	var result string
 
 	err := q.GetContext(ctx, &result, query, orderID, username)
 	switch {
@@ -109,11 +179,11 @@ func (r *RepositorySQL) orderIsNotExistsForThisUser(ctx context.Context, q q, us
 	return false, nil
 }
 
-func (r *RepositorySQL) insertOrderInfo(ctx context.Context, q q, username string, orderID uint32) error {
+func (r *RepositorySQL) insertOrderInfo(ctx context.Context, q q, username string, orderID string) error {
 
-	query := `	INSERT INTO orders (id, username, accrual, status, uploaded_at)
+	query := `	INSERT INTO orders (order_id, username, accrual, status, uploaded_at)
 				VALUES ($1, $2, -1, 'NEW', NOW())
-				ON CONFLICT (id) DO NOTHING
+				ON CONFLICT (order_id) DO NOTHING
 				RETURNING TRUE`
 
 	var ok bool

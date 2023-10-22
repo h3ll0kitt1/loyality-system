@@ -43,7 +43,7 @@ func NewRepository(ctx context.Context, DatabaseDSN string, log *zap.SugaredLogg
 		return nil, fmt.Errorf("create users table failed: %w", err)
 	}
 	query = `	CREATE TABLE IF NOT EXISTS orders (
-				id BIGINT PRIMARY KEY,
+				order_id VARCHAR(32) PRIMARY KEY,
 				username VARCHAR(255) NOT NULL REFERENCES users(username),
 				status VARCHAR(12) NOT NULL,
 				accrual INTEGER DEFAULT -1,
@@ -63,7 +63,7 @@ func NewRepository(ctx context.Context, DatabaseDSN string, log *zap.SugaredLogg
 	}
 
 	query = `	CREATE TABLE IF NOT EXISTS withdraws  (
-				id BIGINT PRIMARY KEY,
+				order_id VARCHAR(255) PRIMARY KEY,
 				username VARCHAR(255) NOT NULL REFERENCES users(username),
 				sum INTEGER NOT NULL,
 				processed_at TIMESTAMP NOT NULL)`

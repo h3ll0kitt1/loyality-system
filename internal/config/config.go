@@ -11,9 +11,11 @@ import (
 )
 
 type Config struct {
-	AccrualSystem string
+	AccrualSystem struct {
+		HostPort string
+	}
 
-	Server struct {
+	Gohermart struct {
 		HostPort string
 	}
 
@@ -38,14 +40,14 @@ func (cfg *Config) Parse() error {
 		flagCheckInterval int
 		flagTokenExpire   int
 		flagAccrualSystem string
-		flagHostPort      string
+		flagGohermart     string
 		flagDatabaseDSN   string
 	)
 
-	flag.IntVar(&flagCheckInterval, "i", 1, "number of minuts to update order status")
+	flag.IntVar(&flagCheckInterval, "i", 30, "number of seconds to update order status")
 	flag.IntVar(&flagTokenExpire, "e", 6, "number of minuts before JWT token expires for client")
-	flag.StringVar(&flagAccrualSystem, "r", "", "address of system bonus calculations")
-	flag.StringVar(&flagHostPort, "a", "localhost:8080", "address and port to run app")
+	flag.StringVar(&flagAccrualSystem, "r", "localhost:8080", "address of system bonus calculations")
+	flag.StringVar(&flagGohermart, "a", "localhost:9090", "address and port to run app")
 	flag.StringVar(&flagDatabaseDSN, "d", "", "databaseDSN to connect to database")
 	flag.Parse()
 
@@ -63,8 +65,8 @@ func (cfg *Config) Parse() error {
 		flagAccrualSystem = envAccrualSystem
 	}
 
-	if envHostPort := os.Getenv("RUN_ADDRESS"); envHostPort != "" {
-		flagHostPort = envHostPort
+	if envGohermart := os.Getenv("RUN_ADDRESS"); envGohermart != "" {
+		flagGohermart = envGohermart
 	}
 
 	if envDatabaseDSN := os.Getenv("DATABASE_URI"); envDatabaseDSN != "" {
@@ -82,10 +84,10 @@ func (cfg *Config) Parse() error {
 		envSecretKey = secretKey
 	}
 
-	cfg.AccrualSystem = flagAccrualSystem
-	cfg.Server.HostPort = flagHostPort
+	cfg.AccrualSystem.HostPort = flagAccrualSystem
+	cfg.Gohermart.HostPort = flagGohermart
 	cfg.DatabaseDSN = flagDatabaseDSN
-	cfg.CheckInterval = time.Duration(flagCheckInterval) * time.Minute
+	cfg.CheckInterval = time.Duration(flagCheckInterval) * time.Second
 
 	cfg.JWT.TokenExpire = time.Duration(flagTokenExpire) * time.Hour
 	cfg.JWT.SecretKey = envSecretKey

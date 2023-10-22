@@ -39,7 +39,7 @@ type Repository interface {
 	GetPasswordHashForUser(ctx context.Context, username string) (string, error)
 
 	// order
-	InsertOrderInfo(ctx context.Context, username string, orderID uint32) (bool, error)
+	InsertOrderInfo(ctx context.Context, username string, orderID string) (bool, error)
 	UpdateOrderInfo(ctx context.Context, order domain.OrderInfoRequest) error
 
 	GetOrdersInfoForUser(ctx context.Context, username string) ([]domain.OrderInfo, error)
@@ -47,7 +47,7 @@ type Repository interface {
 
 	// // balance
 	GetBonusInfoForUser(ctx context.Context, username string) (domain.BonusInfo, error)
-	WithdrawBonusForOrder(ctx context.Context, username string, orderID uint32, sum int64) error
+	WithdrawBonusForOrder(ctx context.Context, username string, orderID string, sum int64) error
 	GetBonusOperationsForUser(ctx context.Context, username string) ([]domain.WithdrawInfo, error)
 }
 

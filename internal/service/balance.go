@@ -10,7 +10,7 @@ func (s *Service) GetBonusInfoForUser(ctx context.Context, username string) (dom
 	return s.repo.GetBonusInfoForUser(ctx, username)
 }
 
-func (s *Service) WithdrawBonusForOrder(ctx context.Context, username string, orderID uint32, sum int64) error {
+func (s *Service) WithdrawBonusForOrder(ctx context.Context, username string, orderID string, sum int64) error {
 	return s.repo.WithdrawBonusForOrder(ctx, username, orderID, sum)
 }
 

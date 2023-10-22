@@ -10,7 +10,7 @@ type BonusInfo struct {
 }
 
 type WithdrawInfo struct {
-	OrderID     uint32    `json:"order" db:"id"`
+	OrderID     string    `json:"order" db:"order_id"`
 	Sum         int64     `json:"sum"`
 	ProcessedAt time.Time `json:"processed_at,omitempty" db:"processed_at"`
 }
